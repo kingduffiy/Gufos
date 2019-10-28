@@ -1,31 +1,32 @@
 using System.Collections.Generic;
 using System.Threading.Tasks;
-using Backend.Models;
+using Backend.Domains;
+using Backend.Repositories;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.AspNetCore.Authorization;
 
 namespace Backend.Controllers
 {
     // Definimos nossa rota do controller e dizemos que é um controller de API
     [Route("api/[controller]")]
     [ApiController]
-    [Authorize]
     public class UsuarioController : ControllerBase
     {
-        GufosContext _contexto = new GufosContext();
+        // GufosContext _contexto = new GufosContext();
+
+        UsuarioRepository _repositorio = new UsuarioRepository();
 
         // GET : api/Usuario
         [HttpGet]
         public async Task<ActionResult<List<Usuario>>> Get(){
 
-            var usuarios = await _contexto.Usuario.ToListAsync();
+            var Usuarios = await _repositorio.Listar();
 
-            if(usuarios == null){
+            if(Usuarios == null){
                 return NotFound();
             }
 
-            return usuarios;
+            return Usuarios;
 
         }
 
@@ -34,26 +35,23 @@ namespace Backend.Controllers
         public async Task<ActionResult<Usuario>> Get(int id){
 
             // FindAsync = procura algo específico no banco
-            var usuario = await _contexto.Usuario.FindAsync(id);
+            var Usuario = await _repositorio.BuscarPorId(id);
 
-            if(usuario == null){
+            if(Usuario == null){
                 return NotFound();
             }
 
-            return usuario;
+            return Usuario;
 
         }
 
         // POST api/Usuario
         [HttpPost]
-        public async Task<ActionResult<Usuario>> Post(Usuario usuario){
+        public async Task<ActionResult<Usuario>> Post(Usuario Usuario){
 
             try
             {
-                // Tratamos contra ataques de SQL Injection
-                await _contexto.AddAsync(usuario);
-                // Salvamos efetivamente o nosso objeto no banco de dados
-                await _contexto.SaveChangesAsync();
+                await _repositorio.Salvar(Usuario);
             }
             catch (DbUpdateConcurrencyException)
             {
@@ -61,29 +59,29 @@ namespace Backend.Controllers
                 throw;
             }
 
-            return usuario;
+            return Usuario;
         }
 
         [HttpPut("{id}")]
-        public async Task<ActionResult> Put(int id, Usuario usuario){
+        public async Task<ActionResult> Put(int id, Usuario Usuario){
             // Se o id do objeto não existir, ele retorna erro 400
-            if(id != usuario.UsuarioId){
+            if(id != Usuario.UsuarioId){
                 return BadRequest();
             }
             
-            // Comparamos os atributos que foram modificados através do EF
-            _contexto.Entry(usuario).State = EntityState.Modified;
+            
 
             try
             {
-                await _contexto.SaveChangesAsync();
+
+                await _repositorio.Alterar(Usuario);
             }
             catch (DbUpdateConcurrencyException)
             {
                 // Verificamos se o objeto inserido realmente existe no banco
-                var usuario_valido = await _contexto.Usuario.FindAsync(id);
+                var Usuario_valido = await _repositorio.BuscarPorId(id);
 
-                if(usuario_valido == null){
+                if(Usuario_valido == null){
                     return NotFound();
                 }else{
 
@@ -96,17 +94,16 @@ namespace Backend.Controllers
             return NoContent();
         }
 
-        // DELETE api/usuario/id
+        // DELETE api/Usuario/id
         [HttpDelete("{id}")]
         public async Task<ActionResult<Usuario>> Delete(int id){
-            var usuario = await _contexto.Usuario.FindAsync(id);
-            if(usuario == null){
+            var Usuario = await _repositorio.BuscarPorId(id);
+            if(Usuario == null){
                 return NotFound();
             }
-            _contexto.Usuario.Remove(usuario);
-            await _contexto.SaveChangesAsync();
-
-            return usuario;
+            await _repositorio.Excluir(Usuario);
+            
+            return Usuario;
         }
     }
 }

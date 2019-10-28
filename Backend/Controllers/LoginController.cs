@@ -3,7 +3,8 @@ using System.IdentityModel.Tokens.Jwt;
 using System.Linq;
 using System.Security.Claims;
 using System.Text;
-using Backend.Models;
+using Backend.Domains;
+using Backend.ViewModels;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Configuration;
@@ -30,16 +31,13 @@ namespace Backend.Controllers
 
         // Chamamos nosso método para validar o usuário na aplicação
 
-        private Usuario ValidaUsuario(Usuario login){
+        private Usuario ValidaUsuario(LoginViewModel login){
             var usuario = _context.Usuario.FirstOrDefault(
                 u => u.Email == login.Email && 
-                Senha == login.Senha
+                u.Senha == login.Senha
             );
 
-            if(usuario != null){
-                usuario = login;
-            }
-
+            
             return usuario;
         }
 
@@ -55,16 +53,16 @@ namespace Backend.Controllers
             var Claims = new[] {
                 new Claim(JwtRegisteredClaimNames.NameId, userInfo.Nome),
                 new Claim(JwtRegisteredClaimNames.Email, userInfo.Email),
-                new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().Tostring()),
+                new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()),
             };
 
             // Configuramos nosso Token e seu tempo de vida
             var token = new JwtSecurityToken(
                 _config["Jwt : Issuer"],
                 _config["Jwt : Issuer"],
-                claims,
+                Claims,
                 expires: DateTime.Now.AddMinutes(120),
-                SigningCredentials : credentials
+                signingCredentials : credentials
             );
 
             return new JwtSecurityTokenHandler().WriteToken(token);
@@ -74,7 +72,7 @@ namespace Backend.Controllers
         // Usamos essa anotação para ignorar a autenticação nesse método
         [AllowAnonymous]
         [HttpPost]
-        public IActionResult login([FromBody]Usuario login){
+        public IActionResult login([FromBody]LoginViewModel login){
             
             IActionResult response = Unauthorized();
             var user = ValidaUsuario(login);

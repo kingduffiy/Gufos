@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using System.Threading.Tasks;
-using Backend.Models;
+using Backend.Domains;
+using Backend.Repositories;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
@@ -11,19 +12,21 @@ namespace Backend.Controllers
     [ApiController]
     public class LocalizacaoController : ControllerBase
     {
-        GufosContext _contexto = new GufosContext();
+        // GufosContext _contexto = new GufosContext();
+
+        LocalizacaoRepository _repositorio = new LocalizacaoRepository();
 
         // GET : api/Localizacao
         [HttpGet]
         public async Task<ActionResult<List<Localizacao>>> Get(){
 
-            var localizacoes = await _contexto.Localizacao.ToListAsync();
+            var localizacaos = await _repositorio.Listar();
 
-            if(localizacoes == null){
+            if(localizacaos == null){
                 return NotFound();
             }
 
-            return localizacoes;
+            return localizacaos;
 
         }
 
@@ -32,26 +35,23 @@ namespace Backend.Controllers
         public async Task<ActionResult<Localizacao>> Get(int id){
 
             // FindAsync = procura algo específico no banco
-            var categoria = await _contexto.Localizacao.FindAsync(id);
+            var localizacao = await _repositorio.BuscarPorId(id);
 
-            if(categoria == null){
+            if(localizacao == null){
                 return NotFound();
             }
 
-            return categoria;
+            return localizacao;
 
         }
 
         // POST api/Localizacao
         [HttpPost]
-        public async Task<ActionResult<Localizacao>> Post(Localizacao categoria){
+        public async Task<ActionResult<Localizacao>> Post(Localizacao localizacao){
 
             try
             {
-                // Tratamos contra ataques de SQL Injection
-                await _contexto.AddAsync(categoria);
-                // Salvamos efetivamente o nosso objeto no banco de dados
-                await _contexto.SaveChangesAsync();
+                await _repositorio.Salvar(localizacao);
             }
             catch (DbUpdateConcurrencyException)
             {
@@ -59,29 +59,29 @@ namespace Backend.Controllers
                 throw;
             }
 
-            return categoria;
+            return localizacao;
         }
 
         [HttpPut("{id}")]
-        public async Task<ActionResult> Put(int id, Localizacao categoria){
+        public async Task<ActionResult> Put(int id, Localizacao localizacao){
             // Se o id do objeto não existir, ele retorna erro 400
-            if(id != categoria.LocalizacaoId){
+            if(id != localizacao.LocalizacaoId){
                 return BadRequest();
             }
             
-            // Comparamos os atributos que foram modificados através do EF
-            _contexto.Entry(categoria).State = EntityState.Modified;
+            
 
             try
             {
-                await _contexto.SaveChangesAsync();
+
+                await _repositorio.Alterar(localizacao);
             }
             catch (DbUpdateConcurrencyException)
             {
                 // Verificamos se o objeto inserido realmente existe no banco
-                var categoria_valido = await _contexto.Localizacao.FindAsync(id);
+                var localizacao_valido = await _repositorio.BuscarPorId(id);
 
-                if(categoria_valido == null){
+                if(localizacao_valido == null){
                     return NotFound();
                 }else{
 
@@ -94,17 +94,16 @@ namespace Backend.Controllers
             return NoContent();
         }
 
-        // DELETE api/categoria/id
+        // DELETE api/localizacao/id
         [HttpDelete("{id}")]
         public async Task<ActionResult<Localizacao>> Delete(int id){
-            var categoria = await _contexto.Localizacao.FindAsync(id);
-            if(categoria == null){
+            var localizacao = await _repositorio.BuscarPorId(id);
+            if(localizacao == null){
                 return NotFound();
             }
-            _contexto.Localizacao.Remove(categoria);
-            await _contexto.SaveChangesAsync();
-
-            return categoria;
+            await _repositorio.Excluir(localizacao);
+            
+            return localizacao;
         }
     }
 }

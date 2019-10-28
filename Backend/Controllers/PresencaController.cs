@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using System.Threading.Tasks;
-using Backend.Models;
+using Backend.Domains;
+using Backend.Repositories;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
@@ -11,19 +12,21 @@ namespace Backend.Controllers
     [ApiController]
     public class PresencaController : ControllerBase
     {
-        GufosContext _contexto = new GufosContext();
+        // GufosContext _contexto = new GufosContext();
+
+        PresencaRepository _repositorio = new PresencaRepository();
 
         // GET : api/Presenca
         [HttpGet]
         public async Task<ActionResult<List<Presenca>>> Get(){
 
-            var presencas = await _contexto.Presenca.ToListAsync();
+            var categorias = await _repositorio.Listar();
 
-            if(presencas == null){
+            if(categorias == null){
                 return NotFound();
             }
 
-            return presencas;
+            return categorias;
 
         }
 
@@ -32,26 +35,23 @@ namespace Backend.Controllers
         public async Task<ActionResult<Presenca>> Get(int id){
 
             // FindAsync = procura algo específico no banco
-            var presenca = await _contexto.Presenca.FindAsync(id);
+            var categoria = await _repositorio.BuscarPorId(id);
 
-            if(presenca == null){
+            if(categoria == null){
                 return NotFound();
             }
 
-            return presenca;
+            return categoria;
 
         }
 
         // POST api/Presenca
         [HttpPost]
-        public async Task<ActionResult<Presenca>> Post(Presenca presenca){
+        public async Task<ActionResult<Presenca>> Post(Presenca categoria){
 
             try
             {
-                // Tratamos contra ataques de SQL Injection
-                await _contexto.AddAsync(presenca);
-                // Salvamos efetivamente o nosso objeto no banco de dados
-                await _contexto.SaveChangesAsync();
+                await _repositorio.Salvar(categoria);
             }
             catch (DbUpdateConcurrencyException)
             {
@@ -59,29 +59,29 @@ namespace Backend.Controllers
                 throw;
             }
 
-            return presenca;
+            return categoria;
         }
 
         [HttpPut("{id}")]
-        public async Task<ActionResult> Put(int id, Presenca presenca){
+        public async Task<ActionResult> Put(int id, Presenca categoria){
             // Se o id do objeto não existir, ele retorna erro 400
-            if(id != presenca.PresencaId){
+            if(id != categoria.PresencaId){
                 return BadRequest();
             }
             
-            // Comparamos os atributos que foram modificados através do EF
-            _contexto.Entry(presenca).State = EntityState.Modified;
+            
 
             try
             {
-                await _contexto.SaveChangesAsync();
+
+                await _repositorio.Alterar(categoria);
             }
             catch (DbUpdateConcurrencyException)
             {
                 // Verificamos se o objeto inserido realmente existe no banco
-                var presenca_valido = await _contexto.Presenca.FindAsync(id);
+                var categoria_valido = await _repositorio.BuscarPorId(id);
 
-                if(presenca_valido == null){
+                if(categoria_valido == null){
                     return NotFound();
                 }else{
 
@@ -94,17 +94,16 @@ namespace Backend.Controllers
             return NoContent();
         }
 
-        // DELETE api/presenca/id
+        // DELETE api/categoria/id
         [HttpDelete("{id}")]
         public async Task<ActionResult<Presenca>> Delete(int id){
-            var presenca = await _contexto.Presenca.FindAsync(id);
-            if(presenca == null){
+            var categoria = await _repositorio.BuscarPorId(id);
+            if(categoria == null){
                 return NotFound();
             }
-            _contexto.Presenca.Remove(presenca);
-            await _contexto.SaveChangesAsync();
-
-            return presenca;
+            await _repositorio.Excluir(categoria);
+            
+            return categoria;
         }
     }
 }
